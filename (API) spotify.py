@@ -3,21 +3,21 @@ import os
 import logging
 import boto3
 import requests
-import base64
+import base64 # 인코딩(문자열을 바이트로), 디코딩(바이트를 문자열로) 하는 프로그램
 import json
 import pymysql
 from datetime import datetime
 import pandas as pd
 import jsonpath  # pip3 install jsonpath --user
 
-client_id = "74cbd487458843f1ad3f5fa1e914c02f"
-client_secret = "752e4ed11062473f9da9076c4499d51b"
+client_id = "866cbf6c89dd4a98b73b9cd7c41b1366"
+client_secret = "a3c236d072604a3980b4632d4b5d54fa"
 
-host = "fastcampus.cxxbo4jh5ykm.ap-northeast-2.rds.amazonaws.com"
+host = "data-engineering-spotify.cbj4vgtnwqms.us-east-2.rds.amazonaws.com"
 port = 3306
-username = "sean"
+username = "jwryu87"
 database = "production"
-password = "fastcampus"
+password = "Tkekfl!38"
 
 
 def main():
@@ -29,6 +29,8 @@ def main():
         logging.error("could not connect to rds")
         sys.exit(1)
 
+    # get_headers 에서 headers 를 가져오는데 이거는 왜 필요한 거지?
+    # - {'Authorization': 'Bearer BQAn7eCZHKiYNQVfSd8FK4JhrsoIaBbwQy0_Xi-h7y_eBQqYjtYSuv3bKhJzL7fJU2Av5o6crizvo6KF0Cc'}
     headers = get_headers(client_id, client_secret)
 
     # RDS - 아티스트 ID를 가져오고

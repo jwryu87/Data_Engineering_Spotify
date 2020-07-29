@@ -1,10 +1,14 @@
 import sys
-import requests
-import base64
-import json
+import os
 import logging
+import boto3
+import requests
+import base64 # 인코딩(문자열을 바이트로), 디코딩(바이트를 문자열로) 하는 프로그램
+import json
 import pymysql
-
+from datetime import datetime
+import pandas as pd
+import jsonpath  # pip3 install jsonpath --user
 
 client_id = "866cbf6c89dd4a98b73b9cd7c41b1366"
 client_secret = "a3c236d072604a3980b4632d4b5d54fa"
@@ -25,89 +29,74 @@ def main():
         logging.error("could not connect to rds")
         sys.exit(1)
 
-    cursor.execute("SHOW TABLES")
-    print(cursor.fetchall())
-
-    print("success")
-
-    query = "INSERT INTO artist_genres (artist_id, genre, updated_at) VALUES ('{1}', '{0}', NOW())".format('1234', 'hip-hop')
-    cursor.execute(query)
-    conn.commit()
-
-
-    sys.exit(0)
-
     headers = get_headers(client_id, client_secret)
 
-    ## Spotify Search API
-    params = {
-        "q": "BTS",
-        "type": "artist",
-        "limit": "5"
+    print(headers)
+
+
+    # RDS - 아티스트 ID를 가져오고
+    cursor.execute("SELECT id FROM artists LIMIT 10")
+
+    top_track_keys = {
+        "id": "id",
+        "name": "name",
+        "popularity": "popularity",
+        "external_url": "external_urls.spotify"
     }
+    # Top Tracks Spotify 가져오고
+    top_tracks = []
+    for (id, ) in cursor.fetchall():
 
-    r = requests.get("https://api.spotify.com/v1/search", params=params, headers=headers)
-
-    print(r.text)
-    print(type(r.text))
-    sys.exit(0)
-
-    try:
-        r = requests.get("https://api.spotify.com/v1/search", params=params, headers=headers)
-
-    except:
-        logging.error(r.text)
-        sys.exit(1)
-
-
-    r = requests.get("https://api.spotify.com/v1/search", params=params, headers=headers)
-
-    if r.status_code != 200:
-        logging.error(r.text)
-
-        if r.status_code == 429:
-
-            retry_after = json.loads(r.headers)['Retry-After']
-            time.sleep(int(retry_after))
-
-            r = requests.get("https://api.spotify.com/v1/search", params=params, headers=headers)
-
-        ## access_token expired
-        elif r.status_code == 401:
-
-            headers = get_headers(client_id, client_secret)
-            r = requests.get("https://api.spotify.com/v1/search", params=params, headers=headers)
-
-        else:
-            sys.exit(1)
-
-
-    # Get BTS' Albums
-
-    r = requests.get("https://api.spotify.com/v1/artists/3Nrfpe0tUJi4K4DXYWgMUX/albums", headers=headers)
-
-    raw = json.loads(r.text)
-
-    total = raw['total']
-    offset = raw['offset']
-    limit = raw['limit']
-    next = raw['next']
-
-    albums = []
-    albums.extend(raw['items'])
-
-    ## 난 100개만 뽑아 오겠다
-    while next:
-
-        r = requests.get(raw['next'], headers=headers)
+        URL = "https://api.spotify.com/v1/artists/{}/top-tracks".format(id)
+        params = {
+            'country': 'US'
+        }
+        r = requests.get(URL, params=params, headers=headers)
         raw = json.loads(r.text)
-        next = raw['next']
-        print(next)
 
-        albums.extend(raw['items'])
-        count = len(albums)
+        for i in raw['tracks']:
+            top_track = {}
+            for k, v in top_track_keys.items():
+                top_track.update({k: jsonpath.jsonpath(i, v)})
+                top_track.update({'artist_id': id})
+                top_tracks.append(top_track)
 
-    print(len(albums))
+
+
+    # track_ids
+    track_ids = [i['id'][0] for i in top_tracks]
+
+    top_tracks = pd.DataFrame(top_tracks)
+    top_tracks.to_parquet('top-tracks.parquet', engine='pyarrow', compression='snappy')
+
+    dt = datetime.utcnow().strftime("%Y-%m-%d")
+
+    s3 = boto3.resource('s3')
+    object = s3.Object('spotify-artists', 'top-tracks/dt={}/top-tracks.parquet'.format(dt))
+    data = open('top-tracks.parquet', 'rb')
+    object.put(Body=data)
+    # S3 import
+
+    tracks_batch = [track_ids[i: i+100] for i in range(0, len(track_ids), 100)]
+
+    audio_features = []
+    for i in tracks_batch:
+
+        ids = ','.join(i)
+        URL = "https://api.spotify.com/v1/audio-features/?ids={}".format(ids)
+
+        r = requests.get(URL, headers=headers)
+        raw = json.loads(r.text)
+
+        audio_features.extend(raw['audio_features'])
+
+    audio_features = pd.DataFrame(audio_features)
+    audio_features.to_parquet('audio-features.parquet', engine='pyarrow', compression='snappy')
+
+    s3 = boto3.resource('s3')
+    object = s3.Object('spotify-artists', 'audio-features/dt={}/top-tracks.parquet'.format(dt))
+    data = open('audio-features.parquet', 'rb')
+    object.put(Body=data)
 
 
 
@@ -133,10 +122,6 @@ def get_headers(client_id, client_secret):
     }
 
     return headers
-
-
-
-
 
 
 if __name__=='__main__':

@@ -1,13 +1,18 @@
-a = '재우'
-encoded = a.encode('utf-8')
-print(encoded)
-encoded2 = a.encode('euc-kr')
-print(encoded2)
-# b'\xec\x9e\xac\xec\x9a\xb0'
-# b'\xc0\xe7\xbf\xec'
+import sys
+import os
+import boto3
 
-b = b'\xec\x9e\xac\xec\x9a\xb0'
-decoded = b.decode('utf-8')
-print(decoded)
+from boto3.dynamodb.conditions import Key, Attr
 
-import
+def main():
+
+    try:
+        dynamodb = boto3.resource('dynamodb', region_name='ap-northeast-2', endpoint_url='http://dynamodb.ap-northeast-2.amazonaws.com')
+    except:
+        logging.error('could not connect to dynamodb')
+        sys.exit(1)
+
+    print("Success")
+
+if __name__=='__main__':
+    main()

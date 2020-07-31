@@ -40,33 +40,32 @@ def main():
 
     cursor.execute('SELECT id FROM artists')
 
-    # countries = ['US', 'CA']
-    # for country in countries:
-    for (artist_id, ) in cursor.fetchall():
+    artist_id = '43ZHCT0cAZBISjO8DG9PnE'
+    URL = "https://api.spotify.com/v1/artists/{}/top-tracks".format(artist_id)
+    print(URL)
 
-        URL = "https://api.spotify.com/v1/artists/{}/top-tracks".format(artist_id)
 
-        params = {
-            'country': 'US'
+    params = {
+        'country': 'US'
+    }
+
+    r = requests.get(URL, params=params, headers=headers)a
+
+    raw = json.loads(r.text)
+
+
+    for track in raw['tracks']:
+
+        data = {
+            'artist_id': artist_id,
+            # 'country': country
         }
 
-        r = requests.get(URL, params=params, headers=headers)
+        data.update(track)
 
-        raw = json.loads(r.text)
-
-
-        for track in raw['tracks']:
-
-            data = {
-                'artist_id': artist_id,
-            }
-
-            data.update(track)
-
-            table.put_item(
-                Item=data
-            )
-
+        table.put_item(
+            Item=data
+        )
 
 
 

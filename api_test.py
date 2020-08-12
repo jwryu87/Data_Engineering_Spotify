@@ -1,11 +1,10 @@
 import sys
-import os
-import boto3
 import requests
 import base64
 import json
 import logging
 import pymysql
+import csv
 
 
 client_id = "866cbf6c89dd4a98b73b9cd7c41b1366"
@@ -20,13 +19,6 @@ password = "Tkekfl!38"
 
 def main():
 
-
-    try:
-        dynamodb = boto3.resource('dynamodb', region_name='ap-northeast-2', endpoint_url='http://dynamodb.ap-northeast-2.amazonaws.com')
-    except:
-        logging.error('could not connect to dynamodb')
-        sys.exit(1)
-
     try:
         conn = pymysql.connect(host, user=username, passwd=password, db=database, port=port, use_unicode=True, charset='utf8')
         cursor = conn.cursor()
@@ -36,38 +28,14 @@ def main():
 
     headers = get_headers(client_id, client_secret)
 
-    table = dynamodb.Table('top_tracks')
+    ## Spotify Search API
 
-    cursor.execute('SELECT id FROM artists')
-
-    countries = ['US', 'CA']
-    for country in countries:
-        for (artist_id, ) in cursor.fetchall():
-
-
-            URL = "https://api.spotify.com/v1/artists/{}/top-tracks".format(artist_id)
-            params = {
-                'country': 'US'
-            }
-
-            r = requests.get(URL, params=params, headers=headers)
-
-            raw = json.loads(r.text)
-
-            for track in raw['tracks']:
-
-                data = {
-                    'artist_id': artist_id,
-                    'country': country
-                }
-
-                data.update(track)
-
-                table.put_item(
-                    Item=data
-                )
-
-
+    artists = []
+    with open('artist_list.csv', 'rt', encoding='UTF8') as f:
+        raw = csv.reader(f)
+        for row in raw:
+            artists.append(row[0])
+        print(artists)
 
 
 
@@ -93,6 +61,17 @@ def get_headers(client_id, client_secret):
     }
 
     return headers
+
+
+def insert_row(cursor, data, table):
+
+    placeholders = ', '.join(['%s'] * len(data))
+    columns = ', '.join(data.keys())
+    key_placeholders = ', '.join(['{0}=%s'.format(k) for k in data.keys()])
+    sql = "INSERT INTO %s ( %s ) VALUES ( %s ) ON DUPLICATE KEY UPDATE %s" % (table, columns, placeholders, key_placeholders)
+    cursor.execute(sql, list(data.values())*2)
+
+
 
 
 if __name__=='__main__':

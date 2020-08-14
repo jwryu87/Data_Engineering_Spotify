@@ -6,7 +6,7 @@ import logging
 import pymysql
 import csv
 
-
+# 접속 정보
 client_id = "866cbf6c89dd4a98b73b9cd7c41b1366"
 client_secret = "a3c236d072604a3980b4632d4b5d54fa"
 
@@ -16,16 +16,18 @@ username = "jwryu87"
 database = "production"
 password = "Tkekfl!38"
 
-
 def main():
 
+    # db mysql 접속
     try:
         conn = pymysql.connect(host, user=username, passwd=password, db=database, port=port, use_unicode=True, charset='utf8')
         cursor = conn.cursor()
     except:
         logging.error("could not connect to rds")
         sys.exit(1)
+    ####################################################################################################################
 
+    print("접속성공")
     headers = get_headers(client_id, client_secret)
 
     ## Spotify Search API
@@ -36,6 +38,102 @@ def main():
         for row in raw:
             artists.append(row[0])
         print(artists)
+
+    for a in artists:
+        params = {
+            "q": a,
+            "type": "artist",
+            "limit": "1"
+        }
+
+        r = requests.get("https://api.spotify.com/v1/search", params=params, headers=headers)
+
+        raw = json.loads(r.text)
+
+        print(raw)
+
+        artist = {}
+        try:
+            print("insert 시작")
+            artist_raw = raw['artists']['items'][0]
+            if artist_raw['name'] == params['q']:
+
+                artist.update(
+                    {
+                        'id': artist_raw['id'],
+                        'name': artist_raw['name'],
+                        'followers': artist_raw['followers']['total'],
+                        'popularity': artist_raw['popularity'],
+                        'url': artist_raw['external_urls']['spotify'],
+                        'image_url': artist_raw['images'][0]['url']
+                    }
+                )
+                insert_row(cursor, artist, 'artists')
+        except:
+            logging.error('something worng')
+            continue
+
+    conn.commit()
+    sys.exit(0)
+    print("insert 끝. commit 완료")
+    #
+    #
+    # try:
+    #     r = requests.get("https://api.spotify.com/v1/search", params=params, headers=headers)
+    #
+    # except:
+    #     logging.error(r.text)
+    #     sys.exit(1)
+    #
+    #
+    # r = requests.get("https://api.spotify.com/v1/search", params=params, headers=headers)
+    #
+    # if r.status_code != 200:
+    #     logging.error(r.text)
+    #
+    #     if r.status_code == 429:
+    #
+    #         retry_after = json.loads(r.headers)['Retry-After']
+    #         time.sleep(int(retry_after))
+    #
+    #         r = requests.get("https://api.spotify.com/v1/search", params=params, headers=headers)
+    #
+    #     ## access_token expired
+    #     elif r.status_code == 401:
+    #
+    #         headers = get_headers(client_id, client_secret)
+    #         r = requests.get("https://api.spotify.com/v1/search", params=params, headers=headers)
+    #
+    #     else:
+    #         sys.exit(1)
+    #
+    #
+    # # Get BTS' Albums
+    #
+    # r = requests.get("https://api.spotify.com/v1/artists/3Nrfpe0tUJi4K4DXYWgMUX/albums", headers=headers)
+    #
+    # raw = json.loads(r.text)
+    #
+    # total = raw['total']
+    # offset = raw['offset']
+    # limit = raw['limit']
+    # next = raw['next']
+    #
+    # albums = []
+    # albums.extend(raw['items'])
+    #
+    # ## 난 100개만 뽑아 오겠다
+    # while next:
+    #
+    #     r = requests.get(raw['next'], headers=headers)
+    #     raw = json.loads(r.text)
+    #     next = raw['next']
+    #     print(next)
+    #
+    #     albums.extend(raw['items'])
+    #     count = len(albums)
+    #
+    # print(len(albums))
 
 
 

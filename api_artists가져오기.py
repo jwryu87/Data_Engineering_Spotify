@@ -6,7 +6,7 @@ import logging
 import pymysql
 import csv
 
-
+# 접속 정보
 client_id = "866cbf6c89dd4a98b73b9cd7c41b1366"
 client_secret = "a3c236d072604a3980b4632d4b5d54fa"
 
@@ -16,20 +16,22 @@ username = "jwryu87"
 database = "production"
 password = "Tkekfl!38"
 
-
 def main():
 
+    # db mysql 접속
     try:
         conn = pymysql.connect(host, user=username, passwd=password, db=database, port=port, use_unicode=True, charset='utf8')
         cursor = conn.cursor()
     except:
         logging.error("could not connect to rds")
         sys.exit(1)
+    ####################################################################################################################
 
     headers = get_headers(client_id, client_secret)
 
     ## Spotify Search API
 
+    # artists 리스트에 csv 파일 내용 담기
     artists = []
     with open('artist_list.csv', 'rt', encoding='UTF8') as f:
         raw = csv.reader(f)

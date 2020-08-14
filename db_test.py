@@ -18,65 +18,27 @@ database = "production"
 password = "Tkekfl!38"
 
 
+
 def main():
 
 
     try:
         dynamodb = boto3.resource('dynamodb', region_name='ap-northeast-2', endpoint_url='http://dynamodb.ap-northeast-2.amazonaws.com')
-        print("success connect to Dynamo")
     except:
         logging.error('could not connect to dynamodb')
         sys.exit(1)
 
-    try:
-        conn = pymysql.connect(host, user=username, passwd=password, db=database, port=port, use_unicode=True, charset='utf8')
-        cursor = conn.cursor()
-        print("success connect to RDB")
-    except:
-        logging.error("could not connect to rds")
-        sys.exit(1)
 
     headers = get_headers(client_id, client_secret)
 
-    print(headers)
-
+    # top_tracks 테이블 세팅
     table = dynamodb.Table('top_tracks')
 
-    print(table)
-
-    cursor.execute('SELECT id FROM artists')
-
-    countries = ['US', 'CA']
-    for country in countries:
-
-        print(country)
-
-        for (artist_id, ) in cursor.fetchall():
-
-            print('artists 이 테이블에 데이터 없어서 그런듯')
-
-
-            URL = "https://api.spotify.com/v1/artists/{}/top-tracks".format(artist_id)
-            params = {
-                'country': 'US'
-            }
-
-            r = requests.get(URL, params=params, headers=headers)
-
-            raw = json.loads(r.text)
-
-            for track in raw['tracks']:
-
-                data = {
-                    'artist_id': artist_id,
-                    'country': country
-                }
-
-                data.update(track)
-
-                table.put_item(
-                    Item=data
-                )
+    table.put_item(
+        Item={
+              'artist_id': 'test'
+        }
+    )
 
 
 

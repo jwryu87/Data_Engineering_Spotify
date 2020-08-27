@@ -7,7 +7,6 @@ import json
 import logging
 import pymysql
 
-
 client_id = "866cbf6c89dd4a98b73b9cd7c41b1366"
 client_secret = "a3c236d072604a3980b4632d4b5d54fa"
 
@@ -17,35 +16,62 @@ username = "jwryu87"
 database = "production"
 password = "Tkekfl!38"
 
-
+# s3 = boto3.client('s3',aws_access_key_id=client_id, aws_secret_access_key=client_secret)
+# response = s3.get_object(Bucket='BUCKET', Key='KEY')
 
 def main():
-
-
     try:
-        dynamodb = boto3.resource('dynamodb', region_name='ap-northeast-2', endpoint_url='http://dynamodb.ap-northeast-2.amazonaws.com')
+        dynamodb = boto3.resource('dynamodb', region_name='ap-northeast-2',
+                                  endpoint_url='http://dynamodb.ap-northeast-2.amazonaws.com')
     except:
         logging.error('could not connect to dynamodb')
         sys.exit(1)
 
+    try:
+        conn = pymysql.connect(host, user=username, passwd=password, db=database, port=port, use_unicode=True,
+                               charset='utf8')
+        cursor = conn.cursor()
+    except:
+        logging.error("could not connect to rds")
+        sys.exit(1)
 
     headers = get_headers(client_id, client_secret)
 
-    # top_tracks 테이블 세팅
     table = dynamodb.Table('top_tracks')
 
-    table.put_item(
-        Item={
-              'artist_id': 'test'
+    # cursor.execute('SELECT id FROM artists')
+    # cursor.execute('SELECT id FROM artists limit 1')
+    cursor.execute('SELECT id FROM artists_test')
+
+    for (artist_id, ) in cursor.fetchall():
+
+        URL = "https://api.spotify.com/v1/artists/{}/top-tracks".format(artist_id)
+        params = {
+            'country': 'US'
         }
-    )
 
+        r = requests.get(URL, params=params, headers=headers)
 
+        raw = json.loads(r.text)
 
+        for track in raw['tracks']:
+
+            data = {
+                'artist_id': artist_id
+            }
+
+            print(data)
+            print(track)
+
+            data.update(track)
+            print(data)
+
+            table.put_item(
+                Item=data
+            )
 
 
 def get_headers(client_id, client_secret):
-
     endpoint = "https://accounts.spotify.com/api/token"
     encoded = base64.b64encode("{}:{}".format(client_id, client_secret).encode('utf-8')).decode('ascii')
 
@@ -68,5 +94,5 @@ def get_headers(client_id, client_secret):
     return headers
 
 
-if __name__=='__main__':
+if __name__ == '__main__':
     main()

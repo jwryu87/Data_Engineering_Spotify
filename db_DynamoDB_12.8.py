@@ -14,9 +14,10 @@ def main():
 
     table = dynamodb.Table('top_tracks')
 
+    # 다이나모DB의 쿼리
     response = table.query(
         KeyFilter
-        FilterExpression=Attr('popularity').gt(90)
+        FilterExpression=Attr('popularity').gt(90) # gt = greater than 
     )
     print(response['Items'])
     print(len(response['Items']))

@@ -1,41 +1,31 @@
+import sys
+import os
 import boto3
+import requests
+import base64
+import json
+import logging
+import pymysql
 
-def create_movie_table(dynamodb=None):
-    if not dynamodb:
-        # dynamodb = boto3.resource('dynamodb', endpoint_url="http://localhost:8000")
+from boto3.dynamodb.conditions import Key, Attr
+
+def main():
+
+    try:
         dynamodb = boto3.resource('dynamodb', region_name='ap-northeast-2', endpoint_url='http://dynamodb.ap-northeast-2.amazonaws.com')
+    except:
+        logging.error('could not connect to dynamodb')
+        sys.exit(1)
 
-    table = dynamodb.create_table(
-        TableName='Movies',
-        KeySchema=[
-            {
-                'AttributeName': 'year',
-                'KeyType': 'HASH'  # Partition key
-            },
-            {
-                'AttributeName': 'title',
-                'KeyType': 'RANGE'  # Sort key
-            }
-        ],
-        AttributeDefinitions=[
-            {
-                'AttributeName': 'year',
-                'AttributeType': 'N'
-            },
-            {
-                'AttributeName': 'title',
-                'AttributeType': 'S'
-            },
+    table = dynamodb.Table('top_tracks')
 
-        ],
-        ProvisionedThroughput={
-            'ReadCapacityUnits': 10,
-            'WriteCapacityUnits': 10
-        }
+    response = table.query(
+        # KeyFilter
+        FilterExpression=Attr('popularity').gt(50)
     )
-    return table
+    print(response['Items'])
 
 
-if __name__ == '__main__':
-    movie_table = create_movie_table()
-    print("Table status:", movie_table.table_status)
+
+if __name__=='__main__':
+    main()

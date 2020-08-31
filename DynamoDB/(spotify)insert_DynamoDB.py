@@ -8,14 +8,14 @@ import logging
 import pymysql
 
 
-client_id = "74cbd487458843f1ad3f5fa1e914c02f"
-client_secret = "752e4ed11062473f9da9076c4499d51b"
+client_id = "866cbf6c89dd4a98b73b9cd7c41b1366"
+client_secret = "a3c236d072604a3980b4632d4b5d54fa"
 
-host = "fastcampus.cxxbo4jh5ykm.ap-northeast-2.rds.amazonaws.com"
+host = "data-engineering-spotify.cbj4vgtnwqms.us-east-2.rds.amazonaws.com"
 port = 3306
-username = "sean"
+username = "jwryu87"
 database = "production"
-password = "fastcampus"
+password = "Tkekfl!38"
 
 
 def main():

@@ -65,8 +65,6 @@ def main():
     # track_ids
     track_ids = [i['id'][0] for i in top_tracks]
 
-    print(track_ids)
-
     # (parquet 화 시 struct 에 문제가 있을 수 있다.)
     # parquet 화 과정에서 아래와 유사한 데이터 파이프라인 과정이 필요
     # > s3의 가장 raw 데이터가 들어옴
@@ -76,15 +74,19 @@ def main():
     top_tracks = pd.DataFrame(top_tracks)
     top_tracks.to_parquet('top-tracks.parquet', engine='pyarrow', compression='snappy') # parquet 화 된것이 더 퍼포먼스가 좋고 압축할떄 더 효율이 있다.
 
-    sys.exit()
+    # 여기까지 parquet 을 통해서 top_tracks은 완성
+    ############################################################################################################
+
 
     dt = datetime.utcnow().strftime("%Y-%m-%d")
 
     s3 = boto3.resource('s3')
-    object = s3.Object('spotify-artists', 'top-tracks/dt={}/top-tracks.parquet'.format(dt))
+    object = s3.Object('spotify-artists-rjw', 'top-tracks/dt={}/top-tracks.parquet'.format(dt))
     data = open('top-tracks.parquet', 'rb')
     object.put(Body=data)
     # S3 import
+
+
 
     tracks_batch = [track_ids[i: i+100] for i in range(0, len(track_ids), 100)]
 
@@ -102,8 +104,11 @@ def main():
     audio_features = pd.DataFrame(audio_features)
     audio_features.to_parquet('audio-features.parquet', engine='pyarrow', compression='snappy')
 
+
+
+
     s3 = boto3.resource('s3')
-    object = s3.Object('spotify-artists', 'audio-features/dt={}/top-tracks.parquet'.format(dt))
+    object = s3.Object('spotify-artists-rjw', 'audio-features/dt={}/top-tracks.parquet'.format(dt))
     data = open('audio-features.parquet', 'rb')
     object.put(Body=data)
 
